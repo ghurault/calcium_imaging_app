@@ -1,8 +1,5 @@
 # Initialisation ----------------------------------------------------------
 
-# TO DO
-# User guide
-
 library(shiny)
 
 plot_curve <- function(df, BL_bounds = c(NA, NA), ATP_bounds = c(), ATP_peak = NA, Iono_peak = NA){
@@ -112,23 +109,76 @@ ui <- fluidPage(
     ),
     tabPanel("Help",
              tags$h2("User guide"),
-             "Work in progress",
-             tags$h3("Preparing the data"),
-             tags$h3("Loading the data"),
-             tags$h3("Computing statistics"),
-             tags$h3("Saving results"),
-             
-             tags$h2("Notes"),
-             tags$p("The app is coded in R using Shiny.
-                    The code is available on ",
-                    tags$a(href = "https://github.com/ghurault/calcium_imaging_app", "my GitHub"),
-                    "."
+             tags$p(
+               "This application provides a framework to perform a semi-automatic curve analysis for calcium imaging data."
              ),
-             tags$p("Please report any issues ",
-                    tags$a(href = "https://github.com/ghurault/calcium_imaging_app/issues", "here"), "."),
-             tags$p("For questions, email ",
-                    tags$a("guillem.hurault@hotmail.fr")),
-             tags$p("")
+             tags$p(
+               "It aims to facilitate the derivation of the basal level, ATP response duration, ATP peak and ionomycin peak."
+             ),
+             tags$h3("Preparing the data"),
+             tags$p(
+               "The data should be uploaded as a single", tags$b("csv file"), " with the first column representing time and the other columns representing experiment.
+               Each experiment should have its own column: for instance, if there are 5 experiments, the csv file should consists in 6 columns."
+             ),
+             tags$p(
+               "Click on ", tags$b("Browse"), " on the left panel to upload the csv file.
+               If the file has a ", tags$b("header"), ", please click the corresponding box.
+               Please select the ", tags$b("separator"), " used in the csv file.
+               If ", tags$b("missing values"), " are present in the data, please enter the strings that should be considered as missing values in the corresponding text box."
+             ),
+             tags$p(
+               "The data will be shown in the right panel.
+               You will have the possibility to display the entire dataset by clicking on ", tags$b("Show all"),", otherwise, only the first 10 rows will be displayed.
+               You can also change the ", tags$b("number of decimal places"), " to display in the table.
+               If the data was processed correctly, the time series of the first experiment will be displayed under the table"
+             ),
+             tags$h3("Computing statistics"),
+             tags$p(
+               "Select the ", tags$b("experiment"), " you would like to extract the statistics from in the drop-down selection box.
+               If an header is provided, experiments are named according to the header, otherwise, they are assigned a number:
+               the first experiment corresponds to the second column (the first column is time), the second experiment corresponds to the third column, etc."
+             ),
+             tags$p(
+               "The basal level is computed as the average response (y axis) between two points (bounds).
+               To select the lower bound, click on ", tags$b("Basal level lower bound"), ", then click on the plot where to set this bound. 
+               Once you have clicked, a vertical line will appear corresponding to the bound you have set.
+               If you are not happy with this value, you can click again on the plot to change it.
+               Repeat the process for the ", tags$b("Basal level upper bound"), ".
+               When both the lower bound and upper bound are selected, the area where the average is computed is highlighted in green.
+               The basal level will be displayed in the table below the graph."
+             ),
+             tags$p(
+               "The ATP response duration is computed as the time difference between the ", tags$b("ATP response upper bound"), " and the ", tags$b("ATP response lower bound"), ".
+               You can select these bounds similarly to how the basal level bounds are selected.
+               The ATP response will appear highlighted in blue."
+             ),
+             tags$p(
+               "To select the ATP peak, select ", tags$b("ATP peak"), " in the left panel and click on the plot where the peak is located.
+               The identified point will appear in yellow and its value will be displayed on the table below the graph.
+               If you have clicked close enough to the peak, the peak (maximum) will be automatically selected."
+             ),
+             tags$p(
+               "The ionomycin peak can be derived similarly by selecting ", tags$b("Ionomycin peak"), " on the left panel.
+               It will appear in orange."
+             ),
+             tags$h3("Saving results"),
+             tags$p(
+               "The derived statistics can be saved by clicking the button ", tags$b("submit"), ": a new table will appear containing the saved values.
+               When this is done, you can change experiment in the drop-down selection box, compute new statistics and saved them; or export the results as a csv file by clicking on ", tags$b("Save"), "."),
+             tags$h2("Notes"),
+             tags$p(
+               "This app is available for free but please acknowledge it in your work.
+               The code (R language for statistical computing, using the Shiny package) is open-source and available on ",
+               tags$a(href = "https://github.com/ghurault/calcium_imaging_app", "my GitHub"), "."
+             ),
+             tags$p(
+               "Please report any issues ",
+               tags$a(href = "https://github.com/ghurault/calcium_imaging_app/issues", "here"), "."
+             ),
+             tags$p(
+               "For questions, email ",
+               tags$a(href = "mailto:guillem.hurault@hotmail.fr", "guillem.hurault@hotmail.fr")
+             )
     )
   )
   
@@ -163,12 +213,6 @@ server <- function(input, output) {
     }
   }, digits = function(){input$dig})
   
-  # Number of experiments
-  N_exp <- reactive({
-    req(df0())
-    ncol(df0()) - 1
-  })
-  
   # Select experiment
   output$exp_select <- renderUI({
     req(df0())
@@ -181,7 +225,7 @@ server <- function(input, output) {
   # Whether the data is valid
   is_valid <- reactive({
     req(df0())
-    tmp <- ( N_exp() > 0)
+    tmp <- ( ncol(df0()) > 1)
     for (i in 1:ncol(df0())){
       tmp & is.numeric(df0()[, i])
     }
@@ -190,7 +234,7 @@ server <- function(input, output) {
   
   # Process data
   df <- reactive({
-    req(is_valid())
+    req(is_valid(), input$experiment)
     if (is_valid()) {
       tmp <- reshape2::melt(df0(), id.vars = "t", variable.name = "Experiment", value.name = "y")
       subset(tmp, Experiment == input$experiment)
@@ -222,14 +266,6 @@ server <- function(input, output) {
                                "Ionomycin peak" = "Iono_peak_btn"))
     }
   })
-  
-  # Display value selected
-  # output$info <- renderText({
-  #   req(df())
-  #   paste("BL lower bound = ", BL_lower(),
-  #         "\nBL upper bound = ", BL_upper(),
-  #         sep = "")
-  # })
   
   # Values
   BL_lower <- reactiveVal(value = NA)
@@ -263,10 +299,8 @@ server <- function(input, output) {
   # Basal level
   BL <- reactive({
     req(df())
-    
     if (!is.na(BL_lower()) & !is.na(BL_upper())) {
       tmp <- c(BL_lower(), BL_upper())
-      
       mean(df()$y[df()$t >= min(tmp) & df()$t <= max(tmp)], na.rm = TRUE)
     } else {
       NA
@@ -336,4 +370,3 @@ server <- function(input, output) {
 # App ---------------------------------------------------------------------
 
 shinyApp(ui = ui, server = server)
-
