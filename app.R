@@ -2,7 +2,12 @@
 
 library(shiny)
 
-plot_curve <- function(df, BL_bounds = c(NA, NA), ATP_bounds = c(), ATP_peak = NA, Iono_peak = NA){
+plot_curve <- function(df,
+                       BL_bounds = c(NA, NA),
+                       ATP_bounds = c(),
+                       ATP_peak = NA,
+                       Iono_peak = NA,
+                       mult_peaks = c()){
   # Plot curve
   #
   # Args:
@@ -11,14 +16,15 @@ plot_curve <- function(df, BL_bounds = c(NA, NA), ATP_bounds = c(), ATP_peak = N
   # ATP bounds: ATP response time bounds
   # ATP_peak: Time of ATP peak
   # Iono_peak: Time of Ionomycin peak
+  # mult_peaks: peaks
   #
   # Returns:
   # Ggplot
   
   library(ggplot2)
   
-  palette <- c("#009E73", "#56B4E9", "#F0E442", "#E69F00")
-  
+  palette <- c("#009E73", "#56B4E9", "#F0E442", "#E69F00", "#D55E00")
+
   p <- ggplot() +
     geom_line(data = df,
               aes(x = t, y = y),
@@ -68,6 +74,21 @@ plot_curve <- function(df, BL_bounds = c(NA, NA), ATP_bounds = c(), ATP_peak = N
                         aes(x = t, y = y),
                         size = 4,
                         colour = palette[4])
+  }
+  
+  # Average peaks (red)
+  if (length(mult_peaks) > 0) {
+    tmp_peaks <- do.call(rbind,
+                         lapply(mult_peaks,
+                                function(pk) {
+                                  df[which.min(abs(df$y - pk)), ]
+                                }))
+    
+    p <- p + geom_point(data = tmp_peaks,
+                        aes(x = t, y = y),
+                        size = 4,
+                        colour = palette[5])
+    
   }
   
   return(p)
@@ -260,7 +281,8 @@ server <- function(input, output) {
                BL_bounds = c(BL_lower(), BL_upper()),
                ATP_bounds = c(ATP_lower(), ATP_upper()),
                ATP_peak = ATP_peak(),
-               Iono_peak = Iono_peak()
+               Iono_peak = Iono_peak(),
+               mult_peaks = mult_peaks()
     )
   })
   
@@ -276,7 +298,8 @@ server <- function(input, output) {
                                "ATP response lower bound" = "ATP_lower_btn",
                                "ATP response upper bound" = "ATP_upper_btn",
                                "ATP peak" = "ATP_peak_btn",
-                               "Ionomycin peak" = "Iono_peak_btn"))
+                               "Ionomycin peak" = "Iono_peak_btn",
+                               "Average peaks" = "avg_peak_btn"))
     }
   })
   
@@ -287,6 +310,7 @@ server <- function(input, output) {
   ATP_upper <- reactiveVal(value = NA)
   ATP_peak <- reactiveVal(value = NA)
   Iono_peak <- reactiveVal(value = NA)
+  mult_peaks <- reactiveVal(value = c())
   
   # Action when there is a click
   observeEvent(input$plot_click,
@@ -305,6 +329,9 @@ server <- function(input, output) {
                    ATP_peak(max_around)
                  } else if (input$features == "Iono_peak_btn") {
                    Iono_peak(max_around)
+                 } else if (input$features == "avg_peak_btn") {
+                   mult_peaks(c(mult_peaks(), max_around))
+                   # Do something
                  }
                }
   )
@@ -330,11 +357,17 @@ server <- function(input, output) {
     }
   })
   
+  # Average peaks
+  avg_peak <- reactive({
+    req(df())
+    mean(mult_peaks())
+  })
+  
   # Statistics
   stats <- reactive({
     req(df())
-    tmp <- data.frame(BL(), ATP(), ATP_peak(), Iono_peak())
-    colnames(tmp) <- c("Basal level", "ATP response duration", "ATP peak", "Ionomycin peak")
+    tmp <- data.frame(BL(), ATP(), ATP_peak(), Iono_peak(), avg_peak())
+    colnames(tmp) <- c("Basal level", "ATP response duration", "ATP peak", "Ionomycin peak", "Average peaks")
     return(tmp)
   })
   
