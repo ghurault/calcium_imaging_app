@@ -310,7 +310,8 @@ server <- function(input, output) {
   ATP_upper <- reactiveVal(value = NA)
   ATP_peak <- reactiveVal(value = NA)
   Iono_peak <- reactiveVal(value = NA)
-  mult_peaks <- reactiveVal(value = c())
+  mult_peaks <- reactiveVal(value = numeric(0))
+  
   # Reset values when changing experiment
   observeEvent(input$experiment, {
     BL_lower(NA)
