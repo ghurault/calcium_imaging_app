@@ -20,44 +20,54 @@ plot_curve <- function(df, BL_bounds = c(NA, NA), ATP_bounds = c(), ATP_peak = N
   palette <- c("#009E73", "#56B4E9", "#F0E442", "#E69F00")
   
   p <- ggplot() +
-    geom_line(data = df, aes(x = t, y = y),
+    geom_line(data = df,
+              aes(x = t, y = y),
               size = 2) +
     labs(x = "Time", y = "Ratio") +
-    scale_y_continuous(expand = c(0, 0), limits = c(0, max(df$y * 1.05, na.rm = TRUE))) +
+    scale_y_continuous(expand = c(0, 0),
+                       limits = c(0, max(df$y * 1.05, na.rm = TRUE))) +
     theme_classic(base_size = 20)
   
   # Basal level (green)
-  p <- p + geom_segment(data =  subset(df, t %in% BL_bounds),
+  p <- p + geom_segment(data = subset(df, t %in% BL_bounds),
                         aes(x = t, xend = t, y = y),
-                        yend = 0, colour = palette[1], size = 2)
+                        yend = 0,
+                        colour = palette[1],
+                        size = 2)
   if (sum(is.na(BL_bounds)) == 0) {
     p <- p + geom_area(data = subset(df, t >= min(BL_bounds) &  t <= max(BL_bounds)),
                        aes(x = t, y = y),
-                       fill = palette[1], alpha = .5)
+                       fill = palette[1],
+                       alpha = .5)
   }
   
   # ATP response (blue)
   p <- p + geom_segment(data =  subset(df, t %in% ATP_bounds),
                         aes(x = t, xend = t, y = y),
-                        yend = 0, colour = palette[2], size = 2)
+                        yend = 0,
+                        colour = palette[2],
+                        size = 2)
   if (sum(is.na(ATP_bounds)) == 0) {
     p <- p + geom_area(data = subset(df, t >= min(ATP_bounds) &  t <= max(ATP_bounds)),
                        aes(x = t, y = y),
-                       fill = palette[2], alpha = .5)
+                       fill = palette[2],
+                       alpha = .5)
   }
   
   # ATP peak (yellow)
   if (!is.na(ATP_peak)) {
     p <- p + geom_point(data = df[which.min(abs(df$y - ATP_peak)), ],
                         aes(x = t, y = y),
-                        size = 4, colour = palette[3])
+                        size = 4,
+                        colour = palette[3])
   }
   
   # Ionomycin peak (yellow)
   if (!is.na(Iono_peak)) {
     p <- p + geom_point(data = df[which.min(abs(df$y - Iono_peak)), ],
                         aes(x = t, y = y),
-                        size = 4, colour = palette[4])
+                        size = 4,
+                        colour = palette[4])
   }
   
   return(p)
@@ -194,7 +204,7 @@ server <- function(input, output) {
     tmp <- read.csv(input$data$datapath,
                     header = input$header,
                     sep = input$sep,
-                    na.strings = c(strsplit(input$na,",")[[1]],"","NaN"))
+                    na.strings = c(strsplit(input$na,",")[[1]], "", "NaN"))
     if (input$header) {
       colnames(tmp)[1] <- "t"
     } else {
@@ -211,14 +221,16 @@ server <- function(input, output) {
     } else {
       df0()
     }
-  }, digits = function(){input$dig})
+  }, digits = function() {input$dig})
   
   # Select experiment
   output$exp_select <- renderUI({
     req(df0())
-    if (is_valid()){
-      selectInput("experiment", label = "Select experiment",
-                  choices = colnames(df0())[-1], multiple = FALSE)
+    if (is_valid()) {
+      selectInput("experiment",
+                  label = "Select experiment",
+                  choices = colnames(df0())[-1],
+                  multiple = FALSE)
     }
   })
   
@@ -226,7 +238,7 @@ server <- function(input, output) {
   is_valid <- reactive({
     req(df0())
     tmp <- ( ncol(df0()) > 1)
-    for (i in 1:ncol(df0())){
+    for (i in 1:ncol(df0())) {
       tmp & is.numeric(df0()[, i])
     }
     return(tmp)
@@ -256,7 +268,8 @@ server <- function(input, output) {
   output$click_select <- renderUI({
     req(is_valid())
     if (is_valid()) {
-      radioButtons("features", label = "Select value to set",
+      radioButtons("features",
+                   label = "Select value to set",
                    choices = c("None" = "none",
                                "Basal level lower bound" = "BL_lower_btn",
                                "Basal level upper bound" = "BL_upper_btn",
@@ -326,7 +339,7 @@ server <- function(input, output) {
   })
   
   # Display statistics
-  output$disp_stats <- renderTable({stats()}, digits = function(){input$dig})
+  output$disp_stats <- renderTable({stats()}, digits = function() {input$dig})
   
   # Results
   res <- reactiveVal()
@@ -348,18 +361,18 @@ server <- function(input, output) {
   })
   
   # Display results
-  output$disp_results <- renderTable({res()}, digits = function(){input$dig})
+  output$disp_results <- renderTable({res()}, digits = function() {input$dig})
   
   # Download data button
   output$download <- renderUI({
-    if (!is.null(res())){
+    if (!is.null(res())) {
       downloadButton("downloadData", "Save")
     }
   })
   
   # Download data
   output$downloadData <- downloadHandler(
-    filename = function(){"download.csv"},
+    filename = function() {"download.csv"},
     content = function(file) {
       write.csv(res(), file, row.names = FALSE)
     }
