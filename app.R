@@ -177,7 +177,7 @@ ui <- fluidPage(
                "This application provides a framework to perform a semi-automatic curve analysis for calcium imaging data."
              ),
              tags$p(
-               "It aims to facilitate the derivation of the basal level, ATP response duration, ATP peak and ionomycin peak."
+               "It aims to facilitate the derivation of the basal level, ATP response duration, ATP peak, ionomycin peak and the average amplitude of spontaneous oscillations."
              ),
              tags$h3("Preparing the data"),
              tags$p(
@@ -224,6 +224,12 @@ ui <- fluidPage(
              tags$p(
                "The ionomycin peak can be derived similarly by selecting ", tags$b("Ionomycin peak"), " on the left panel.
                It will appear in orange."
+             ),
+             tags$p(
+               "To compute the average amplitude of spontaneous oscillations, select ", tags$b("Spontaneous oscillations"), " on the left panel. 
+               Then click on the plot to identify the spontaneous oscillations.
+               If a point was not identified correctly, you can click on the ", tags$b("Reset values"), " button.
+               Note that the button will reset all measurements for the current experiment."
              ),
              tags$h3("Saving results"),
              tags$p(
