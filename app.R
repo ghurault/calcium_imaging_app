@@ -106,6 +106,26 @@ plot_curve <- function(df,
   return(p)
 }
 
+reset_measurements <- function(measurements) {
+  # Reset measurements
+  #
+  # Args:
+  # measurements: List
+  #
+  # Returns:
+  # List
+  
+  measurements$BL_lower <- NA
+  measurements$BL_upper <- NA
+  measurements$ATP_lower <- NA
+  measurements$ATP_upper <- NA
+  measurements$ATP_peak <- NA
+  measurements$Iono_peak <- NA
+  measurements$mult_peaks <- numeric(0)
+  
+  return(measurements)
+}
+
 # User Interface ----------------------------------------------------------
 
 ui <- fluidPage(
@@ -145,6 +165,7 @@ ui <- fluidPage(
                  plotOutput("plot", click = "plot_click"), # Plot
                  tableOutput("disp_stats"), # Statistics
                  uiOutput("submit_btn"), # Submit
+                 uiOutput("reset_btn"), # Reset
                  tableOutput("disp_results"), # Results
                  uiOutput("download") # Download data
                )
@@ -315,26 +336,12 @@ server <- function(input, output) {
     }
   })
   
-  # Measurements
-  measurements <- reactiveValues(
-    BL_lower = NA,
-    BL_upper = NA,
-    ATP_lower = NA,
-    ATP_upper = NA,
-    ATP_peak = NA,
-    Iono_peak = NA,
-    mult_peaks = numeric(0)
-  )
-  
+  # Measurements (initialise with input$experiment)
+  measurements <- reactiveValues()
+
   # Reset values when changing experiment (also initial values)
   observeEvent(input$experiment, {
-    measurements$BL_lower <- NA
-    measurements$BL_upper <- NA
-    measurements$ATP_lower <- NA
-    measurements$ATP_upper <- NA
-    measurements$ATP_peak <- NA
-    measurements$Iono_peak <- NA
-    measurements$mult_peaks <- numeric(0)
+    reset_measurements(measurements)
   })
   
   # Action when there is a click
@@ -415,6 +422,17 @@ server <- function(input, output) {
     } else {
       res(rbind(tmp, res()))
     }
+  })
+  
+  # Reset button
+  output$reset_btn <- renderUI({
+    req(is_valid())
+    actionButton("reset", "Reset values")
+  })
+  
+  # Submit action
+  observeEvent(input$reset, {
+    reset_measurements(measurements)
   })
   
   # Display results
