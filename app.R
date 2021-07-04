@@ -65,7 +65,7 @@ plot_curve <- function(df,
       mutate(Type = "ATP response"),
   ) %>%
     mutate(Type = factor(Type, levels = names(palette)))
-
+  
   if (nrow(tmp_area) > 0) {
     p <- p +
       geom_area(data = tmp_area,
@@ -74,7 +74,6 @@ plot_curve <- function(df,
   }
   
   ## Plot peaks
-
   tmp_peaks <- bind_rows(
     df[which.min(abs(df$y - ATP_peak)), ] %>%
       mutate(Type = "ATP peak"),
@@ -88,7 +87,7 @@ plot_curve <- function(df,
       mutate(Type = "Average peaks")
   ) %>%
     mutate(Type = factor(Type, levels = names(palette)))
-
+  
   p <- p +
     geom_point(data = tmp_peaks,
                aes(x = t, y = y, colour = Type),
@@ -291,11 +290,11 @@ server <- function(input, output) {
   output$plot <- renderPlot({
     req(df())
     plot_curve(df(),
-               BL_bounds = c(BL_lower(), BL_upper()),
-               ATP_bounds = c(ATP_lower(), ATP_upper()),
-               ATP_peak = ATP_peak(),
-               Iono_peak = Iono_peak(),
-               mult_peaks = mult_peaks()
+               BL_bounds = c(measurements$BL_lower, measurements$BL_upper),
+               ATP_bounds = c(measurements$ATP_lower, measurements$ATP_upper),
+               ATP_peak = measurements$ATP_peak,
+               Iono_peak = measurements$Iono_peak,
+               mult_peaks = measurements$mult_peaks
     )
   })
   
@@ -316,24 +315,26 @@ server <- function(input, output) {
     }
   })
   
-  # Values
-  BL_lower <- reactiveVal()
-  BL_upper <- reactiveVal()
-  ATP_lower <- reactiveVal()
-  ATP_upper <- reactiveVal()
-  ATP_peak <- reactiveVal()
-  Iono_peak <- reactiveVal()
-  mult_peaks <- reactiveVal()
+  # Measurements
+  measurements <- reactiveValues(
+    BL_lower = NA,
+    BL_upper = NA,
+    ATP_lower = NA,
+    ATP_upper = NA,
+    ATP_peak = NA,
+    Iono_peak = NA,
+    mult_peaks = numeric(0)
+  )
   
   # Reset values when changing experiment (also initial values)
   observeEvent(input$experiment, {
-    BL_lower(NA)
-    BL_upper(NA)
-    ATP_lower(NA)
-    ATP_upper(NA)
-    ATP_peak(NA)
-    Iono_peak(NA)
-    mult_peaks(numeric(0))
+    measurements$BL_lower <- NA
+    measurements$BL_upper <- NA
+    measurements$ATP_lower <- NA
+    measurements$ATP_upper <- NA
+    measurements$ATP_peak <- NA
+    measurements$Iono_peak <- NA
+    measurements$mult_peaks <- numeric(0)
   })
   
   # Action when there is a click
@@ -342,20 +343,19 @@ server <- function(input, output) {
                  nearest <- nearPoints(df(), input$plot_click, maxpoints = 1, threshold = Inf)$t
                  max_around <- max(nearPoints(df(), input$plot_click, maxpoints = max(10, ceiling(nrow(df()) / 50)), threshold = Inf)$y)
                  if (input$features == "BL_lower_btn") {
-                   BL_lower(nearest)
+                   measurements$BL_lower <- nearest
                  } else if (input$features == "BL_upper_btn") {
-                   BL_upper(nearest)
+                   measurements$BL_upper <- nearest
                  } else if (input$features == "ATP_lower_btn") {
-                   ATP_lower(nearest)
+                   measurements$ATP_lower <- nearest
                  } else if (input$features == "ATP_upper_btn") {
-                   ATP_upper(nearest)
+                   measurements$ATP_upper <- nearest
                  } else if (input$features == "ATP_peak_btn") {
-                   ATP_peak(max_around)
+                   measurements$ATP_peak <- max_around
                  } else if (input$features == "Iono_peak_btn") {
-                   Iono_peak(max_around)
+                   measurements$Iono_peak <- max_around
                  } else if (input$features == "avg_peak_btn") {
-                   mult_peaks(c(mult_peaks(), max_around))
-                   # Do something
+                   measurements$mult_peaks <- c(measurements$mult_peaks, max_around)
                  }
                }
   )
@@ -363,8 +363,8 @@ server <- function(input, output) {
   # Basal level
   BL <- reactive({
     req(df())
-    if (!is.na(BL_lower()) & !is.na(BL_upper())) {
-      tmp <- c(BL_lower(), BL_upper())
+    if (!is.na(measurements$BL_lower) && !is.na(measurements$BL_upper)) {
+      tmp <- c(measurements$BL_lower, measurements$BL_upper)
       mean(df()$y[df()$t >= min(tmp) & df()$t <= max(tmp)], na.rm = TRUE)
     } else {
       NA
@@ -374,8 +374,8 @@ server <- function(input, output) {
   # ATP response duration
   ATP <- reactive({
     req(df())
-    if (!is.na(ATP_lower()) & !is.na(ATP_upper())) {
-      abs(ATP_upper() - ATP_lower())
+    if (!is.na(measurements$ATP_lower) && !is.na(measurements$ATP_upper)) {
+      abs(measurements$ATP_upper - measurements$ATP_lower)
     } else {
       NA
     }
@@ -384,13 +384,13 @@ server <- function(input, output) {
   # Average peaks
   avg_peak <- reactive({
     req(df())
-    mean(mult_peaks())
+    mean(measurements$mult_peaks)
   })
   
   # Statistics
   stats <- reactive({
     req(df())
-    tmp <- data.frame(BL(), ATP(), ATP_peak(), Iono_peak(), avg_peak())
+    tmp <- data.frame(BL(), ATP(), measurements$ATP_peak, measurements$Iono_peak, avg_peak())
     colnames(tmp) <- c("Basal level", "ATP response duration", "ATP peak", "Ionomycin peak", "Average peaks")
     return(tmp)
   })
@@ -400,7 +400,7 @@ server <- function(input, output) {
   
   # Results
   res <- reactiveVal()
-
+  
   # Submit button
   output$submit_btn <- renderUI({
     req(is_valid())
