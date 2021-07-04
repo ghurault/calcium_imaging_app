@@ -9,7 +9,7 @@ plot_curve <- function(df,
                        ATP_bounds = c(),
                        ATP_peak = NA,
                        Iono_peak = NA,
-                       mult_peaks = c()){
+                       spont_osc = c()){
   # Plot curve
   #
   # Args:
@@ -18,7 +18,7 @@ plot_curve <- function(df,
   # ATP bounds: ATP response time bounds
   # ATP_peak: ATP peak
   # Iono_peak: Ionomycin peak
-  # mult_peaks: peaks
+  # spont_osc: Amplitude of spontaneous oscillations
   #
   # Returns:
   # Ggplot
@@ -29,7 +29,7 @@ plot_curve <- function(df,
                "ATP response" = "#56B4E9",
                "ATP peak" = "#F0E442",
                "Ionomycin peak" = "#E69F00",
-               "Average peaks" = "#D55E00")
+               "Spontaneous oscillations" = "#D55E00")
   
   p <- ggplot()
   
@@ -79,12 +79,12 @@ plot_curve <- function(df,
       mutate(Type = "ATP peak"),
     df[which.min(abs(df$y - Iono_peak)), ] %>%
       mutate(Type = "Ionomycin peak"),
-    lapply(mult_peaks,
+    lapply(spont_osc,
            function(pk) {
              df[which.min(abs(df$y - pk)), ]
            }) %>%
       bind_rows() %>%
-      mutate(Type = "Average peaks")
+      mutate(Type = "Spontaneous oscillations")
   ) %>%
     mutate(Type = factor(Type, levels = names(palette)))
   
@@ -121,7 +121,7 @@ reset_measurements <- function(measurements) {
   measurements$ATP_upper <- NA
   measurements$ATP_peak <- NA
   measurements$Iono_peak <- NA
-  measurements$mult_peaks <- numeric(0)
+  measurements$spont_osc <- numeric(0)
   
   return(measurements)
 }
@@ -315,7 +315,7 @@ server <- function(input, output) {
                ATP_bounds = c(measurements$ATP_lower, measurements$ATP_upper),
                ATP_peak = measurements$ATP_peak,
                Iono_peak = measurements$Iono_peak,
-               mult_peaks = measurements$mult_peaks
+               spont_osc = measurements$spont_osc
     )
   })
   
@@ -332,7 +332,7 @@ server <- function(input, output) {
                                "ATP response upper bound" = "ATP_upper_btn",
                                "ATP peak" = "ATP_peak_btn",
                                "Ionomycin peak" = "Iono_peak_btn",
-                               "Average peaks" = "avg_peak_btn"))
+                               "Spontaneous oscillations" = "spont_osc_btn"))
     }
   })
   
@@ -361,8 +361,8 @@ server <- function(input, output) {
                    measurements$ATP_peak <- max_around
                  } else if (input$features == "Iono_peak_btn") {
                    measurements$Iono_peak <- max_around
-                 } else if (input$features == "avg_peak_btn") {
-                   measurements$mult_peaks <- c(measurements$mult_peaks, max_around)
+                 } else if (input$features == "spont_osc_btn") {
+                   measurements$spont_osc <- c(measurements$spont_osc, max_around)
                  }
                }
   )
@@ -388,17 +388,17 @@ server <- function(input, output) {
     }
   })
   
-  # Average peaks
-  avg_peak <- reactive({
+  # Average amplitude of spontaneous oscillations
+  avg_spont_osc <- reactive({
     req(df())
-    mean(measurements$mult_peaks)
+    mean(measurements$spont_osc)
   })
   
   # Statistics
   stats <- reactive({
     req(df())
-    tmp <- data.frame(BL(), ATP(), measurements$ATP_peak, measurements$Iono_peak, avg_peak())
-    colnames(tmp) <- c("Basal level", "ATP response duration", "ATP peak", "Ionomycin peak", "Average peaks")
+    tmp <- data.frame(BL(), ATP(), measurements$ATP_peak, measurements$Iono_peak, avg_spont_osc())
+    colnames(tmp) <- c("Basal level", "ATP response duration", "ATP peak", "Ionomycin peak", "Avg amp of spontaneous oscillations")
     return(tmp)
   })
   
