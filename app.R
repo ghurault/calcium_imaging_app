@@ -311,6 +311,16 @@ server <- function(input, output) {
   ATP_peak <- reactiveVal(value = NA)
   Iono_peak <- reactiveVal(value = NA)
   mult_peaks <- reactiveVal(value = c())
+  # Reset values when changing experiment
+  observeEvent(input$experiment, {
+    BL_lower(NA)
+    BL_upper(NA)
+    ATP_lower(NA)
+    ATP_upper(NA)
+    ATP_peak(NA)
+    Iono_peak(NA)
+    mult_peaks(numeric(0))
+  })
   
   # Action when there is a click
   observeEvent(input$plot_click,
@@ -376,7 +386,7 @@ server <- function(input, output) {
   
   # Results
   res <- reactiveVal()
-  
+
   # Submit button
   output$submit_btn <- renderUI({
     req(is_valid())
