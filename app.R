@@ -1,6 +1,8 @@
 # Initialisation ----------------------------------------------------------
 
 library(shiny)
+library(dplyr)
+library(tidyr)
 
 plot_curve <- function(df,
                        BL_bounds = c(NA, NA),
@@ -14,8 +16,8 @@ plot_curve <- function(df,
   # df: dataframe for one experiment
   # BL_bounds: Basal level time bounds
   # ATP bounds: ATP response time bounds
-  # ATP_peak: Time of ATP peak
-  # Iono_peak: Time of Ionomycin peak
+  # ATP_peak: ATP peak
+  # Iono_peak: Ionomycin peak
   # mult_peaks: peaks
   #
   # Returns:
@@ -23,73 +25,84 @@ plot_curve <- function(df,
   
   library(ggplot2)
   
-  palette <- c("#009E73", "#56B4E9", "#F0E442", "#E69F00", "#D55E00")
-
-  p <- ggplot() +
+  palette <- c("Basal level" = "#009E73",
+               "ATP response" = "#56B4E9",
+               "ATP peak" = "#F0E442",
+               "Ionomycin peak" = "#E69F00",
+               "Average peaks" = "#D55E00")
+  
+  p <- ggplot()
+  
+  ## Plot data
+  p <- p +
     geom_line(data = df,
               aes(x = t, y = y),
-              size = 2) +
-    labs(x = "Time", y = "Ratio") +
+              size = 2)
+  
+  ## Plot bounds for interval duration
+  tmp_bounds <- bind_rows(
+    df %>%
+      filter(t %in% BL_bounds) %>%
+      mutate(Type = "Basal level"),
+    df %>%
+      filter(t %in% ATP_bounds) %>%
+      mutate(Type = "ATP response")
+  ) %>%
+    mutate(Type = factor(Type, levels = names(palette)))
+  
+  p <- p +
+    geom_segment(data = tmp_bounds,
+                 aes(x = t, xend = t, y = y, colour = Type),
+                 yend = 0, size = 2)
+  
+  ## Plot area for interval duration
+  tmp_area <- bind_rows(
+    df %>%
+      filter(t >= min(BL_bounds) &  t <= max(BL_bounds)) %>%
+      mutate(Type = "Basal level"),
+    df %>%
+      filter(t >= min(ATP_bounds) &  t <= max(ATP_bounds)) %>%
+      mutate(Type = "ATP response"),
+  ) %>%
+    mutate(Type = factor(Type, levels = names(palette)))
+
+  if (nrow(tmp_area) > 0) {
+    p <- p +
+      geom_area(data = tmp_area,
+                aes(x = t, y = y, fill = Type),
+                alpha = .5)
+  }
+  
+  ## Plot peaks
+
+  tmp_peaks <- bind_rows(
+    df[which.min(abs(df$y - ATP_peak)), ] %>%
+      mutate(Type = "ATP peak"),
+    df[which.min(abs(df$y - Iono_peak)), ] %>%
+      mutate(Type = "Ionomycin peak"),
+    lapply(mult_peaks,
+           function(pk) {
+             df[which.min(abs(df$y - pk)), ]
+           }) %>%
+      bind_rows() %>%
+      mutate(Type = "Average peaks")
+  ) %>%
+    mutate(Type = factor(Type, levels = names(palette)))
+
+  p <- p +
+    geom_point(data = tmp_peaks,
+               aes(x = t, y = y, colour = Type),
+               size = 4)
+  
+  ## Formatting
+  p <- p +
+    scale_colour_manual(values = palette, drop = FALSE) +
+    scale_fill_manual(values = palette, drop = FALSE) +
+    labs(x = "Time", y = "Ratio", colour = "", fill = "") +
     scale_y_continuous(expand = c(0, 0),
                        limits = c(0, max(df$y * 1.05, na.rm = TRUE))) +
-    theme_classic(base_size = 20)
-  
-  # Basal level (green)
-  p <- p + geom_segment(data = subset(df, t %in% BL_bounds),
-                        aes(x = t, xend = t, y = y),
-                        yend = 0,
-                        colour = palette[1],
-                        size = 2)
-  if (sum(is.na(BL_bounds)) == 0) {
-    p <- p + geom_area(data = subset(df, t >= min(BL_bounds) &  t <= max(BL_bounds)),
-                       aes(x = t, y = y),
-                       fill = palette[1],
-                       alpha = .5)
-  }
-  
-  # ATP response (blue)
-  p <- p + geom_segment(data =  subset(df, t %in% ATP_bounds),
-                        aes(x = t, xend = t, y = y),
-                        yend = 0,
-                        colour = palette[2],
-                        size = 2)
-  if (sum(is.na(ATP_bounds)) == 0) {
-    p <- p + geom_area(data = subset(df, t >= min(ATP_bounds) &  t <= max(ATP_bounds)),
-                       aes(x = t, y = y),
-                       fill = palette[2],
-                       alpha = .5)
-  }
-  
-  # ATP peak (yellow)
-  if (!is.na(ATP_peak)) {
-    p <- p + geom_point(data = df[which.min(abs(df$y - ATP_peak)), ],
-                        aes(x = t, y = y),
-                        size = 4,
-                        colour = palette[3])
-  }
-  
-  # Ionomycin peak (yellow)
-  if (!is.na(Iono_peak)) {
-    p <- p + geom_point(data = df[which.min(abs(df$y - Iono_peak)), ],
-                        aes(x = t, y = y),
-                        size = 4,
-                        colour = palette[4])
-  }
-  
-  # Average peaks (red)
-  if (length(mult_peaks) > 0) {
-    tmp_peaks <- do.call(rbind,
-                         lapply(mult_peaks,
-                                function(pk) {
-                                  df[which.min(abs(df$y - pk)), ]
-                                }))
-    
-    p <- p + geom_point(data = tmp_peaks,
-                        aes(x = t, y = y),
-                        size = 4,
-                        colour = palette[5])
-    
-  }
+    theme_classic(base_size = 20) +
+    theme(legend.position = "top")
   
   return(p)
 }
