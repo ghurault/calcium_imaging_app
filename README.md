@@ -2,6 +2,7 @@
 
 Available at https://ghurault.shinyapps.io/calcium_imaging_app/ (user guide available)
 
-- `app.R` contains the shiny code
-- `test.csv` is an example file to upload (header = TRUE, separator = ";", no missing vaues)
-- the `dev/` directory contains old, development files
+- [`app.R`](app.R) contains the shiny code
+- The [`data/`](data/) directory contains an example file [`test.csv`](data/test.csv) to demonstrate the capabilities of the app.
+In the app, when uploading the file, you should select `header = TRUE` and `separator = ";`.
+The data does not contain any missing values.
