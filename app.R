@@ -37,7 +37,7 @@ plot_curve <- function(df,
   p <- p +
     geom_line(data = df,
               aes(x = t, y = y),
-              size = 2)
+              linewidth = 2)
   
   ## Plot bounds for interval duration
   tmp_bounds <- bind_rows(
