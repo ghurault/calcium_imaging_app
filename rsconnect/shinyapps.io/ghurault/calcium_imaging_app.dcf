@@ -1,0 +1,13 @@
+name: calcium_imaging_app
+title: calcium_imaging_app
+username: ghurault
+account: ghurault
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 901303
+bundleId: 8696330
+url: https://ghurault.shinyapps.io/calcium_imaging_app/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: data/test.csv|LICENSE|README.md
