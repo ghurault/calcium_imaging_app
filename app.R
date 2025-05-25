@@ -247,7 +247,7 @@ ui <- fluidPage(
              ),
              tags$p(
                "For questions, email ",
-               tags$a(href = "mailto:guillem.hurault@hotmail.fr", "guillem.hurault@hotmail.fr")
+               tags$a(href = "mailto:ghurault.dev@outlook.com", "ghurault.dev@outlook.com")
              )
     )
   )
